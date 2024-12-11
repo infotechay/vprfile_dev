@@ -181,7 +181,7 @@ name: Delete Stale Branches
 on:
   push:
       branches:
-         - production1
+         - production
   workflow_dispatch:
   schedule:
     - cron: '*/5 * * * *' # Runs every 5 minutes
