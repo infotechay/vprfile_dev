@@ -1,64 +1,18 @@
-# name: Delete Stale Feature Branches
-# on:
-#   push:
-#     branches:
-#       - production
-#   workflow_dispatch: # Allows manual triggering of the workflow
-
-# jobs:
-#   delete-stale-branches:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout Repository
-#         uses: actions/checkout@v3 # Specifies the version of the action
-#         with:
-#           repository: your-org/vprfile_dev
-
-#       - name: Fetch All Branches
-#         run: git fetch --all --prune
-
-#       - name: Delete Last 5 Minutes Old Feature Branches
-#         env:
-#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#         run: |
-#           current_date=$(date +%s)
-#           cutoff_date=$(date -d "5 minutes ago" +%s)
-
-#           # Get all remote branches except the protected ones
-#           branches=$(git for-each-ref --format='%(committerdate:raw) %(refname:short)' refs/remotes/origin/ \
-#             | grep -E 'feature/' \
-#             | grep -v -E 'origin/master/origin/prod|origin/non-prod|origin/dev' \
-#             | awk -v cutoff_date="$cutoff_date" '{if ($1 < cutoff_date) print $2}')
-
-#           for branch in $branches; do
-#             branch_name=${branch/origin\//}
-#             echo "Deleting feature branch created more than 5 minutes ago: $branch_name"
-#             git push origin --delete "$branch_name"
-#           done
-
-
-
-
 name: Delete Stale Feature Branches
-
 on:
   push:
     branches:
       - production
-  workflow_dispatch:
-  schedule:
-    - cron: '*/5 * * * *' # Runs every 5 minutes
+  workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
   delete-stale-branches:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3 # Specifies the version of the action
         with:
-          repository: infotechay/vprfile_dev
-          fetch-depth: 0 # Fetch all branches
-          ref: refs/remotes/origin/HEAD # Ensures checkout works without default branch context
+          repository: your-org/vprfile_dev
 
       - name: Fetch All Branches
         run: git fetch --all --prune
@@ -70,9 +24,10 @@ jobs:
           current_date=$(date +%s)
           cutoff_date=$(date -d "5 minutes ago" +%s)
 
+          # Get all remote branches except the protected ones
           branches=$(git for-each-ref --format='%(committerdate:raw) %(refname:short)' refs/remotes/origin/ \
             | grep -E 'feature/' \
-            | grep -v -E 'origin/prod|origin/non-prod|origin/dev' \
+            | grep -v -E 'origin/master|/origin/prod|origin/non-prod|origin/dev' \
             | awk -v cutoff_date="$cutoff_date" '{if ($1 < cutoff_date) print $2}')
 
           for branch in $branches; do
@@ -80,3 +35,48 @@ jobs:
             echo "Deleting feature branch created more than 5 minutes ago: $branch_name"
             git push origin --delete "$branch_name"
           done
+
+
+
+
+# name: Delete Stale Feature Branches
+
+# on:
+#   push:
+#     branches:
+#       - production
+#   workflow_dispatch:
+#   schedule:
+#     - cron: '*/5 * * * *' # Runs every 5 minutes
+
+# jobs:
+#   delete-stale-branches:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
+#         with:
+#           repository: infotechay/vprfile_dev
+#           fetch-depth: 0 # Fetch all branches
+#           ref: refs/remotes/origin/HEAD # Ensures checkout works without default branch context
+
+#       - name: Fetch All Branches
+#         run: git fetch --all --prune
+
+#       - name: Delete Last 5 Minutes Old Feature Branches
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         run: |
+#           current_date=$(date +%s)
+#           cutoff_date=$(date -d "5 minutes ago" +%s)
+
+#           branches=$(git for-each-ref --format='%(committerdate:raw) %(refname:short)' refs/remotes/origin/ \
+#             | grep -E 'feature/' \
+#             | grep -v -E 'origin/master|origin/prodution|origin/non-prod|origin/dev' \
+#             | awk -v cutoff_date="$cutoff_date" '{if ($1 < cutoff_date) print $2}')
+
+#           for branch in $branches; do
+#             branch_name=${branch/origin\//}
+#             echo "Deleting feature branch created more than 5 minutes ago: $branch_name"
+#             git push origin --delete "$branch_name"
+#           done
