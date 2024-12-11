@@ -115,13 +115,13 @@ jobs:
           cutoff_date=$(date -d "5 minutes ago" +%s)
 
           # Get all remote feature branches except the protected ones
-          branches=$(git for-each-ref --format='%(committerdate:raw) %(refname:short)' refs/remotes/origin/ \
+          git for-each-ref --format='%(committerdate:raw) %(refname:short)' refs/remotes/origin/ \
             | grep -E 'feature/' \
-            | grep -v -E 'origin/master|origin/production|origin/non-prod|origin/dev' \
-            | awk -v cutoff_date="$cutoff_date" '{if ($1 < cutoff_date) print $2}')
-
-          for branch in $branches; do
-            branch_name=${branch/origin\//}
-            echo "Deleting feature branch created more than 5 minutes ago: $branch_name"
-            git push origin --delete "$branch_name"
-          done
+            | grep -v -E 'origin/master|origin/prodution|origin/non-prod|origin/dev' \
+            | while read -r committerdate branch_name; do
+                if [ "$committerdate" -lt "$cutoff_date" ]; then
+                  valid_branch=${branch_name#origin/}
+                  echo "Deleting feature branch created more than 5 minutes ago: $valid_branch"
+                  git push origin --delete "$valid_branch" || echo "Failed to delete $valid_branch"
+                fi
+              done
