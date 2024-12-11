@@ -1,11 +1,11 @@
 name: Call Reusable Delete Workflow
 
 on:
-  push:
-    branches:
-      - prodution
-  ## schedule:
-  #   - cron: '*/5 * * * *'
+  # push:
+  #   branches:
+  #     - prodution
+  schedule:
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
