@@ -2,7 +2,7 @@ name: Delete Stale Feature Branches
 on:
   push:
     branches:
-      - prodution
+      - production
   workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
