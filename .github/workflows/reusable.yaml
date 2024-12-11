@@ -10,6 +10,6 @@ on:
 
 jobs:
   call-delete-stale-branches:
-    uses: infotechay/vprfile_dev/.github/workflows/reusable-delete-stale-branches.yml@main
+    uses: infotechay/vprfile_dev/.github/workflows/reusable-delete-stale-branches.yml@master
     with:
       repo-token: ${{ secrets.GITHUB_TOKEN }}
