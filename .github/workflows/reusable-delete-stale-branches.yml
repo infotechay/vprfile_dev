@@ -1,5 +1,5 @@
 name: Delete Stale Feature Branches
-on:
+# on:
   # schedule:
   #   - cron: '*/5 * * * *' # Runs daily at midnight UTC
   workflow_dispatch: # Allows manual triggering of the workflow
