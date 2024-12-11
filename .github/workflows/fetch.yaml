@@ -118,9 +118,9 @@ on:
   push:
     branches:
       - master
-      - production
-      - non-prod
-      - dev
+      # - production
+      # - non-prod
+      # - dev
   workflow_dispatch:
 
 jobs:
