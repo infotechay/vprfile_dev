@@ -83,8 +83,55 @@
 
 
 
+## This scipt delete only feature/ type of branches
 
-name: Delete Stale Feature Branches
+# name: Delete Stale Feature Branches
+
+# on:
+#   push:
+#       branches:
+#          - production
+#   workflow_dispatch:
+#   schedule:
+#     - cron: '*/5 * * * *' # Runs every 5 minutes
+
+# jobs:
+#   delete-stale-branches:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
+#         with:
+#           repository: infotechay/vprfile_dev
+#           fetch-depth: 0 # Fetch all branches
+
+#       - name: Fetch All Branches
+#         run: git fetch --all --prune
+
+#       - name: Delete Last 5 Minutes Old Feature Branches
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         run: |
+#           current_date=$(date +%s)
+#           cutoff_date=$(date -d "5 minutes ago" +%s)
+
+#           # Get all remote feature branches except the protected ones
+#           git for-each-ref --format='%(committerdate:unix) %(refname:short)' refs/remotes/origin/ \
+#             | grep -E 'feature/' \
+#             | grep -v -E 'origin/main|origin/production|origin/non-prod|origin/dev' \
+#             | while read -r committerdate branch_name; do
+#                 if [ "$committerdate" -lt "$cutoff_date" ]; then
+#                   valid_branch=${branch_name#origin/}
+#                   echo "Deleting feature branch created more than 5 minutes ago: $valid_branch"
+#                   git push origin --delete "$valid_branch" || echo "Failed to delete $valid_branch"
+#                 fi
+#               done
+
+
+
+##
+
+name: Delete Stale Branches
 
 on:
   push:
@@ -107,21 +154,20 @@ jobs:
       - name: Fetch All Branches
         run: git fetch --all --prune
 
-      - name: Delete Last 5 Minutes Old Feature Branches
+      - name: Delete Last 5 Minutes Old Branches
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           current_date=$(date +%s)
           cutoff_date=$(date -d "5 minutes ago" +%s)
 
-          # Get all remote feature branches except the protected ones
+          # Get all remote branches except the protected ones
           git for-each-ref --format='%(committerdate:unix) %(refname:short)' refs/remotes/origin/ \
-            | grep -E 'feature/' \
-            | grep -v -E 'origin/main|origin/production|origin/non-prod|origin/dev' \
+            | grep -v -E 'origin/master/origin/main|origin/production|origin/non-prod|origin/dev' \
             | while read -r committerdate branch_name; do
                 if [ "$committerdate" -lt "$cutoff_date" ]; then
                   valid_branch=${branch_name#origin/}
-                  echo "Deleting feature branch created more than 5 minutes ago: $valid_branch"
+                  echo "Deleting branch created more than 5 minutes ago: $valid_branch"
                   git push origin --delete "$valid_branch" || echo "Failed to delete $valid_branch"
                 fi
               done
