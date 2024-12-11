@@ -129,14 +129,59 @@
 
 
 
-##
+## Delete the feature/ and without feature/ branch. also it try to delete default branch
+
+# name: Delete Stale Branches
+
+# on:
+#   push:
+#       branches:
+#          - production
+#   workflow_dispatch:
+#   schedule:
+#     - cron: '*/5 * * * *' # Runs every 5 minutes
+
+# jobs:
+#   delete-stale-branches:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
+#         with:
+#           repository: infotechay/vprfile_dev
+#           fetch-depth: 0 # Fetch all branches
+
+#       - name: Fetch All Branches
+#         run: git fetch --all --prune
+
+#       - name: Delete Last 5 Minutes Old Branches
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         run: |
+#           current_date=$(date +%s)
+#           cutoff_date=$(date -d "5 minutes ago" +%s)
+
+#           # Get all remote branches except the protected ones
+#           git for-each-ref --format='%(committerdate:unix) %(refname:short)' refs/remotes/origin/ \
+#             | grep -v -E 'origin/main|origin/production|origin/non-prod' \
+#             | while read -r committerdate branch_name; do
+#                 if [ "$committerdate" -lt "$cutoff_date" ]; then
+#                   valid_branch=${branch_name#origin/}
+#                   echo "Deleting branch created more than 5 minutes ago: $valid_branch"
+#                   git push origin --delete "$valid_branch" || echo "Failed to delete $valid_branch"
+#                 fi
+#               done
+
+
+
+## It avoide deleting default branch and rest it will delete.
 
 name: Delete Stale Branches
 
 on:
   push:
       branches:
-         - production
+         - production1
   workflow_dispatch:
   schedule:
     - cron: '*/5 * * * *' # Runs every 5 minutes
@@ -154,16 +199,30 @@ jobs:
       - name: Fetch All Branches
         run: git fetch --all --prune
 
+      - name: Get Default Branch
+        id: get-default-branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Use GitHub API to fetch the default branch
+          repo="infotechay/vprfile_dev"
+          default_branch=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/$repo | jq -r '.default_branch')
+
+          echo "Default branch is $default_branch"
+          echo "DEFAULT_BRANCH=$default_branch" >> $GITHUB_ENV
+
       - name: Delete Last 5 Minutes Old Branches
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: ${{ env.DEFAULT_BRANCH }}
         run: |
           current_date=$(date +%s)
           cutoff_date=$(date -d "5 minutes ago" +%s)
 
           # Get all remote branches except the protected ones
           git for-each-ref --format='%(committerdate:unix) %(refname:short)' refs/remotes/origin/ \
-            | grep -v -E 'origin/main|origin/production|origin/non-prod' \
+            | grep -v -E "origin/main|origin/production|origin/non-prod|origin/dev|origin/$DEFAULT_BRANCH" \
             | while read -r committerdate branch_name; do
                 if [ "$committerdate" -lt "$cutoff_date" ]; then
                   valid_branch=${branch_name#origin/}
