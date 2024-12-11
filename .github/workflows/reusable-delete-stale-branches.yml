@@ -115,9 +115,9 @@ jobs:
           cutoff_date=$(date -d "5 minutes ago" +%s)
 
           # Get all remote feature branches except the protected ones
-          git for-each-ref --format='%(committerdate:raw) %(refname:short)' refs/remotes/origin/ \
+          git for-each-ref --format='%(committerdate:unix) %(refname:short)' refs/remotes/origin/ \
             | grep -E 'feature/' \
-            | grep -v -E 'origin/master|origin/prodution|origin/non-prod|origin/dev' \
+            | grep -v -E 'origin/prod|origin/non-prod|origin/dev' \
             | while read -r committerdate branch_name; do
                 if [ "$committerdate" -lt "$cutoff_date" ]; then
                   valid_branch=${branch_name#origin/}
