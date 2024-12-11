@@ -58,7 +58,7 @@ jobs:
         with:
           repository: infotechay/vprfile_dev
           fetch-depth: 0 # Fetch all branches
-          ref: refs/remotes/origin/HEAD # Ensures checkout works without default branch context
+          ref: refs/remotes/origin/master # Ensures checkout works without default branch context
 
       - name: Fetch All Branches
         run: git fetch --all --prune
