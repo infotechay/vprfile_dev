@@ -27,7 +27,7 @@ jobs:
           # Get all remote branches except the protected ones
           branches=$(git for-each-ref --format='%(committerdate:raw) %(refname:short)' refs/remotes/origin/ \
             | grep -E 'feature/' \
-            | grep -v -E 'origin/prod|origin/non-prod|origin/dev' \
+            | grep -v -E 'origin/master/origin/prod|origin/non-prod|origin/dev' \
             | awk -v cutoff_date="$cutoff_date" '{if ($1 < cutoff_date) print $2}')
 
           for branch in $branches; do
