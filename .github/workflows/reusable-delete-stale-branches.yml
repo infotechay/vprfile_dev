@@ -250,11 +250,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          org="infotechay"
-          curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/orgs/$org/repos?per_page=100" \
-            | jq -r '.[].full_name' > repos.txt
-          echo "Fetched repositories:"
+          org="your-organization-name"
+          echo "Fetching repositories for organization: $org"
+
+          response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/orgs/$org/repos?per_page=100")
+
+          # Debug: Save API response to a file for troubleshooting
+          echo "$response" > response.json
+          echo "API response saved to response.json"
+
+          # Parse and extract repository full names
+          echo "$response" | jq -r '.[] | select(.fork == false) | .full_name' > repos.txt
+
+          echo "Repositories to process:"
           cat repos.txt
 
       - name: Process Each Repository
@@ -276,6 +285,13 @@ jobs:
             default_branch=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
               "https://api.github.com/repos/$repo" | jq -r '.default_branch')
 
+            if [ -z "$default_branch" ]; then
+              echo "Failed to retrieve default branch for $repo. Skipping."
+              cd ..
+              rm -rf temp-repo
+              continue
+            fi
+
             echo "Default branch for $repo is $default_branch"
 
             # Get all remote feature branches except protected ones
@@ -293,5 +309,6 @@ jobs:
             cd ..
             rm -rf temp-repo
           done < repos.txt
+
 
 
