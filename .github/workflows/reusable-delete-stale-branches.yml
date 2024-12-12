@@ -250,7 +250,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          org="your-organization-name"
+          org="infotechay"
           echo "Fetching repositories for organization: $org"
 
           response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
