@@ -258,6 +258,8 @@ jobs:
 
           # Debug: Save API response to a file for troubleshooting
           echo "$response" > response.json
+          echo "printing the response.json"
+          cat response.json
           echo "API response saved to response.json"
 
           # Parse and extract repository full names
