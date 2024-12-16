@@ -658,7 +658,7 @@ jobs:
           repositories=($target_repositories)
 
           # Excluded branch names
-          excluded_branches="default production non-prod development"
+          excluded_branches="main production non-prod development master"
 
           # Process each repository in the list
           for repo in "${repositories[@]}"; do
