@@ -237,7 +237,6 @@
 name: Delete Stale Feature Branches Across Organization
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: '*/5 * * * *' # Runs every 5 minutes
   
