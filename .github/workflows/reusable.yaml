@@ -1,15 +1,15 @@
-name: Call Reusable Delete Workflow
+# name: Call Reusable Delete Workflow
 
-on:
-  push:
-    branches:
-      - prodution
-  schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
+# on:
+#   push:
+#     branches:
+#       - prodution
+#   schedule:
+#     - cron: '*/5 * * * *'
+#   workflow_dispatch:
 
-jobs:
-  call-delete-stale-branches:
-    uses: infotechay/vprfile_dev/.github/workflows/reusable-delete-stale-branches.yml@master
-    with:
-      repo-token: ${{ secrets.GITHUB_TOKEN }}
+# jobs:
+#   call-delete-stale-branches:
+#     uses: infotechay/vprfile_dev/.github/workflows/reusable-delete-stale-branches.yml@master
+#     with:
+#       repo-token: ${{ secrets.GITHUB_TOKEN }}
