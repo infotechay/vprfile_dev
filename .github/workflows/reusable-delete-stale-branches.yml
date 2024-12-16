@@ -248,7 +248,7 @@ jobs:
     steps:
       - name: Fetch Repositories with Debugging
         env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+          PAT_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           org: "infotechay" # Replace with the correct org name
         run: |
           org="infotechay"
@@ -277,7 +277,7 @@ jobs:
           org="infotechay"
           echo "Fetching repositories for organization: $org"
 
-          response=$(curl -s -H "Authorization: token $PERSONAL_ACCESS_TOKEN" \
+          response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/orgs/$org/repos?per_page=100")
 
           # Debug: Save API response to a file for troubleshooting
@@ -301,14 +301,14 @@ jobs:
 
           while read -r repo; do
             echo "Processing repository: $repo"
-            git clone --no-checkout --depth 1 "https://$PERSONAL_ACCESS_TOKEN@github.com/$repo" temp-repo
+            git clone --no-checkout --depth 1 "https://$GITHUB_TOKEN@github.com/$repo" temp-repo
             cd temp-repo
 
             # Fetch all branches
             git fetch --all --prune
 
             # Use GitHub API to determine the default branch
-            default_branch=$(curl -s -H "Authorization: token $PERSONAL_ACCESS_TOKEN" \
+            default_branch=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
               "https://api.github.com/repos/$repo" | jq -r '.default_branch')
 
             if [ -z "$default_branch" ]; then
