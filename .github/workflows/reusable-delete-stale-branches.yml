@@ -545,7 +545,7 @@ jobs:
           echo "Repositories fetched:"
           cat repos.csv
 
-      # Step 4: Delete Stale Branches Created 6+ Months Ago and Starting with 'feature/'
+      # Step 4: Delete Stale Feature Branches
       - name: Delete Stale Feature Branches
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
@@ -567,16 +567,24 @@ jobs:
               continue
             fi
 
-            branches=$(echo "$raw_branches" | jq -r '.[] | select(.name != "'"$default_branch"'" and .name != "production" and .name != "non-prod" and .name | startswith("feature/")) | .name')
+            branches=$(echo "$raw_branches" | jq -r '.[] | select(.name != "'"$default_branch"'" and .name != "production" and .name != "non-prod" and .name != null) | .name')
             if [ -z "$branches" ]; then
               echo "No feature branches found to process in repository: $repo. Skipping..."
               continue
             fi
 
-            echo "Feature branches to process in repository $repo: $branches"
+            # Only process branches that start with "feature/"
+            feature_branches=$(echo "$branches" | grep -E '^feature/')
+
+            if [ -z "$feature_branches" ]; then
+              echo "No feature branches to process in repository $repo."
+              continue
+            fi
+
+            echo "Feature branches to process in repository $repo: $feature_branches"
 
             # Loop through each branch
-            for branch in $branches; do
+            for branch in $feature_branches; do
               echo "Processing branch: $branch"
 
               # Fetch the creation date for the branch
@@ -624,6 +632,4 @@ jobs:
           done < repos.csv
 
 
-
-
-
+          
