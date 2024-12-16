@@ -232,7 +232,7 @@
 #               done
 
 
-## Require to scan all repo in org and delete the stale branches
+## Require to scan all repo in org and delete the stale branches --- failed
 
 name: Delete Stale Feature Branches Across Organization
 
@@ -248,12 +248,12 @@ jobs:
       - name: Get Organization Repositories
         id: get-repos
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         run: |
           org="infotechay"
           echo "Fetching repositories for organization: $org"
 
-          response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          response=$(curl -s -H "Authorization: token $PERSONAL_ACCESS_TOKEN" \
             "https://api.github.com/orgs/$org/repos?per_page=100")
 
           # Debug: Save API response to a file for troubleshooting
@@ -270,21 +270,21 @@ jobs:
 
       - name: Process Each Repository
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         run: |
           current_date=$(date +%s)
           cutoff_date=$(date -d "5 minutes ago" +%s)
 
           while read -r repo; do
             echo "Processing repository: $repo"
-            git clone --no-checkout --depth 1 "https://github.com/$repo" temp-repo
+            git clone --no-checkout --depth 1 "https://$PERSONAL_ACCESS_TOKEN@github.com/$repo" temp-repo
             cd temp-repo
 
             # Fetch all branches
             git fetch --all --prune
 
             # Use GitHub API to determine the default branch
-            default_branch=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            default_branch=$(curl -s -H "Authorization: token $PERSONAL_ACCESS_TOKEN" \
               "https://api.github.com/repos/$repo" | jq -r '.default_branch')
 
             if [ -z "$default_branch" ]; then
