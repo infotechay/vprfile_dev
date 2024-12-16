@@ -1,0 +1,440 @@
+# name: Delete Stale Feature Branches
+# on:
+#   push:
+#     branches:
+#       - production
+#   workflow_dispatch: # Allows manual triggering of the workflow
+
+# jobs:
+#   delete-stale-branches:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3 # Specifies the version of the action
+#         with:
+#           repository: your-org/vprfile_dev
+
+#       - name: Fetch All Branches
+#         run: git fetch --all --prune
+
+#       - name: Delete Last 5 Minutes Old Feature Branches
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         run: |
+#           current_date=$(date +%s)
+#           cutoff_date=$(date -d "5 minutes ago" +%s)
+
+#           # Get all remote branches except the protected ones
+#           branches=$(git for-each-ref --format='%(committerdate:raw) %(refname:short)' refs/remotes/origin/ \
+#             | grep -E 'feature/' \
+#             | grep -v -E 'origin/master|/origin/prod|origin/non-prod|origin/dev' \
+#             | awk -v cutoff_date="$cutoff_date" '{if ($1 < cutoff_date) print $2}')
+
+#           for branch in $branches; do
+#             branch_name=${branch/origin\//}
+#             echo "Deleting feature branch created more than 5 minutes ago: $branch_name"
+#             git push origin --delete "$branch_name"
+#           done
+
+
+
+
+# name: Delete Stale Feature Branches
+
+# on:
+#   push:
+#     branches:
+#       - production
+#   workflow_dispatch:
+#   schedule:
+#     - cron: '*/5 * * * *' # Runs every 5 minutes
+
+# jobs:
+#   delete-stale-branches:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
+#         with:
+#           repository: infotechay/vprfile_dev
+#           fetch-depth: 0 # Fetch all branches
+#           ref: refs/remotes/origin/master # Ensures checkout works without default branch context
+
+#       - name: Fetch All Branches
+#         run: git fetch --all --prune
+
+#       - name: Delete Last 5 Minutes Old Feature Branches
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         run: |
+#           current_date=$(date +%s)
+#           cutoff_date=$(date -d "5 minutes ago" +%s)
+
+#           branches=$(git for-each-ref --format='%(committerdate:raw) %(refname:short)' refs/remotes/origin/ \
+#             | grep -E 'feature/' \
+#             | grep -v -E 'origin/master|origin/prodution|origin/non-prod|origin/dev' \
+#             | awk -v cutoff_date="$cutoff_date" '{if ($1 < cutoff_date) print $2}')
+
+#           for branch in $branches; do
+#             branch_name=${branch/origin\//}
+#             echo "Deleting feature branch created more than 5 minutes ago: $branch_name"
+#             git push origin --delete "$branch_name"
+#           done
+
+
+
+## This scipt delete only feature/ type of branches
+
+# name: Delete Stale Feature Branches
+
+# on:
+#   push:
+#       branches:
+#          - production
+#   workflow_dispatch:
+#   schedule:
+#     - cron: '*/5 * * * *' # Runs every 5 minutes
+
+# jobs:
+#   delete-stale-branches:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
+#         with:
+#           repository: infotechay/vprfile_dev
+#           fetch-depth: 0 # Fetch all branches
+
+#       - name: Fetch All Branches
+#         run: git fetch --all --prune
+
+#       - name: Delete Last 5 Minutes Old Feature Branches
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         run: |
+#           current_date=$(date +%s)
+#           cutoff_date=$(date -d "5 minutes ago" +%s)
+
+#           # Get all remote feature branches except the protected ones
+#           git for-each-ref --format='%(committerdate:unix) %(refname:short)' refs/remotes/origin/ \
+#             | grep -E 'feature/' \
+#             | grep -v -E 'origin/main|origin/production|origin/non-prod|origin/dev' \
+#             | while read -r committerdate branch_name; do
+#                 if [ "$committerdate" -lt "$cutoff_date" ]; then
+#                   valid_branch=${branch_name#origin/}
+#                   echo "Deleting feature branch created more than 5 minutes ago: $valid_branch"
+#                   git push origin --delete "$valid_branch" || echo "Failed to delete $valid_branch"
+#                 fi
+#               done
+
+
+
+## Delete the feature/ and without feature/ branch. also it try to delete default branch
+
+# name: Delete Stale Branches
+
+# on:
+#   push:
+#       branches:
+#          - production
+#   workflow_dispatch:
+#   schedule:
+#     - cron: '*/5 * * * *' # Runs every 5 minutes
+
+# jobs:
+#   delete-stale-branches:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
+#         with:
+#           repository: infotechay/vprfile_dev
+#           fetch-depth: 0 # Fetch all branches
+
+#       - name: Fetch All Branches
+#         run: git fetch --all --prune
+
+#       - name: Delete Last 5 Minutes Old Branches
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         run: |
+#           current_date=$(date +%s)
+#           cutoff_date=$(date -d "5 minutes ago" +%s)
+
+#           # Get all remote branches except the protected ones
+#           git for-each-ref --format='%(committerdate:unix) %(refname:short)' refs/remotes/origin/ \
+#             | grep -v -E 'origin/main|origin/production|origin/non-prod' \
+#             | while read -r committerdate branch_name; do
+#                 if [ "$committerdate" -lt "$cutoff_date" ]; then
+#                   valid_branch=${branch_name#origin/}
+#                   echo "Deleting branch created more than 5 minutes ago: $valid_branch"
+#                   git push origin --delete "$valid_branch" || echo "Failed to delete $valid_branch"
+#                 fi
+#               done
+
+
+
+## It avoide deleting default branch and rest it will delete.
+
+# name: Delete Stale Branches
+
+# on:
+#   push:
+#       branches:
+#          - production
+#   workflow_dispatch:
+#   schedule:
+#     - cron: '*/5 * * * *' # Runs every 5 minutes
+
+# jobs:
+#   delete-stale-branches:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
+#         with:
+#           repository: infotechay/vprfile_dev
+#           fetch-depth: 0 # Fetch all branches
+
+#       - name: Fetch All Branches
+#         run: git fetch --all --prune
+
+#       - name: Get Default Branch
+#         id: get-default-branch
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         run: |
+#           # Use GitHub API to fetch the default branch
+#           repo="infotechay/vprfile_dev"
+#           default_branch=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+#             https://api.github.com/repos/$repo | jq -r '.default_branch')
+
+#           echo "Default branch is $default_branch"
+#           echo "DEFAULT_BRANCH=$default_branch" >> $GITHUB_ENV
+
+#       - name: Delete Last 5 Minutes Old Branches
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#           DEFAULT_BRANCH: ${{ env.DEFAULT_BRANCH }}
+#         run: |
+#           current_date=$(date +%s)
+#           cutoff_date=$(date -d "5 minutes ago" +%s)
+
+#           # Get all remote branches except the protected ones
+#           git for-each-ref --format='%(committerdate:unix) %(refname:short)' refs/remotes/origin/ \
+#             | grep -v -E "origin/main|origin/production|origin/non-prod|origin/dev|origin/$DEFAULT_BRANCH" \
+#             | while read -r committerdate branch_name; do
+#                 if [ "$committerdate" -lt "$cutoff_date" ]; then
+#                   valid_branch=${branch_name#origin/}
+#                   echo "Deleting branch created more than 5 minutes ago: $valid_branch"
+#                   git push origin --delete "$valid_branch" || echo "Failed to delete $valid_branch"
+#                 fi
+#               done
+
+
+## Require to scan all repo in org and delete the stale branches --- failed
+
+# name: Delete Stale Feature Branches Across Organization
+
+# on:
+#   schedule:
+#     - cron: '*/5 * * * *' # Runs every 5 minutes
+  
+#   workflow_dispatch: # Allows manual triggering of the workflow
+
+# jobs:
+#   delete-stale-branches:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Fetch Repositories with Debugging
+#         env:
+#           PAT_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+#           org: "infotechay" # Replace with the correct org name
+#         run: |
+#           org="infotechay"
+#           echo "Fetching repositories for organization: $org"
+#           response=$(curl -s -H "Authorization: Bearer $PAT_TOKEN" -H "Accept: application/vnd.github+json" \
+#             "https://api.github.com/orgs/$org/repos?per_page=100")
+#           echo "$response" > response.json
+#           echo "Response:"
+#           cat response.json
+          
+#           # Check if the response contains "message" for errors
+#           if echo "$response" | grep -q '"message"'; then
+#             echo "Error fetching repositories:"
+#             cat response.json
+#             exit 1
+#           fi
+
+#           jq -r '.[] | select(.fork == false) | .full_name' response.json > repos.txt
+#           echo "Repositories found:"
+#           cat repos.txt
+#       - name: Get Organization Repositories
+#         id: get-repos
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+#         run: |
+#           org="infotechay"
+#           echo "Fetching repositories for organization: $org"
+
+#           response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+#             "https://api.github.com/orgs/$org/repos?per_page=100")
+
+#           # Debug: Save API response to a file for troubleshooting
+#           echo "$response" > response.json
+#           echo "printing the response.json"
+#           cat response.json
+#           echo "API response saved to response.json"
+
+#           # Parse and extract repository full names
+#           echo "$response" | jq -r '.[] | select(.fork == false) | .full_name' > repos.txt
+
+#           echo "Repositories to process:"
+#           cat repos.txt
+
+#       - name: Process Each Repository
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+#         run: |
+#           current_date=$(date +%s)
+#           cutoff_date=$(date -d "5 minutes ago" +%s)
+
+#           while read -r repo; do
+#             echo "Processing repository: $repo"
+#             git clone --no-checkout --depth 1 "https://$GITHUB_TOKEN@github.com/$repo" temp-repo
+#             cd temp-repo
+
+#             # Fetch all branches
+#             git fetch --all --prune
+
+#             # Use GitHub API to determine the default branch
+#             default_branch=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+#               "https://api.github.com/repos/$repo" | jq -r '.default_branch')
+
+#             if [ -z "$default_branch" ]; then
+#               echo "Failed to retrieve default branch for $repo. Skipping."
+#               cd ..
+#               rm -rf temp-repo
+#               continue
+#             fi
+
+#             echo "Default branch for $repo is $default_branch"
+
+#             # Get all remote feature branches except protected ones
+#             git for-each-ref --format='%(committerdate:unix) %(refname:short)' refs/remotes/origin/ \
+#               | grep -E 'feature/' \
+#               | grep -v -E "origin/main|origin/production|origin/non-prod|origin/dev|origin/$default_branch" \
+#               | while read -r committerdate branch_name; do
+#                   if [ "$committerdate" -lt "$cutoff_date" ]; then
+#                     valid_branch=${branch_name#origin/}
+#                     echo "Deleting feature branch created more than 5 minutes ago: $valid_branch"
+#                     git push origin --delete "$valid_branch" || echo "Failed to delete $valid_branch"
+#                   fi
+#                 done
+
+#             cd ..
+#             rm -rf temp-repo
+#           done < repos.txt
+
+
+
+
+name: Delete Stale Branches Across Organization -- Ferfectly working code
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Runs every 5 minutes
+  # workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  delete-stale-branches:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Install GitHub CLI
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+
+      # Step 2: Authenticate GitHub CLI
+      # - name: Authenticate GitHub CLI
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      #   run: |
+      #     echo $GITHUB_TOKEN | gh auth login --with-token
+
+      # Step 3: Fetch All Repositories in Organization
+      - name: Fetch All Organization Repositories
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          org="infotechay" # Replace with your organization name
+          echo "Fetching all repositories in the organization..."
+          gh repo list $org --limit 1000 --json name,defaultBranchRef \
+            --jq '.[] | [.name, .defaultBranchRef.name] | @csv' > repos.csv
+          echo "Repositories fetched:"
+          cat repos.csv
+
+      # Step 4: Delete Stale Branches
+      - name: Delete Stale Branches Created 5+ Minutes Ago
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          current_time=$(date +%s)
+          cutoff_time=$(($current_time - 300)) # 5 minutes ago (300 seconds)
+          org="infotechay" # Replace with your organization name
+
+          # Read repositories from the CSV
+          while IFS=, read -r repo default_branch; do
+            repo=$(echo $repo | tr -d '"')
+            default_branch=$(echo $default_branch | tr -d '"')
+            echo "Processing repository: $repo (default branch: $default_branch)"
+
+            # Fetch branches excluding the default branch and protected branches
+            raw_branches=$(gh api repos/$org/$repo/branches 2>/dev/null || echo "ERROR")
+            if [ "$raw_branches" == "ERROR" ]; then
+              echo "Failed to fetch branches for repository: $repo. Skipping..."
+              continue
+            fi
+
+            branches=$(echo "$raw_branches" | jq -r '.[] | select(.name != "'"$default_branch"'" and .name != "production" and .name != "non-prod") | .name')
+            if [ -z "$branches" ]; then
+              echo "No branches found to process in repository: $repo. Skipping..."
+              continue
+            fi
+
+            echo "Branches to process in repository $repo: $branches"
+
+            # Loop through each branch
+            for branch in $branches; do
+              echo "Processing branch: $branch"
+
+              # Fetch the creation date for the branch
+              branch_date=$(gh api repos/$org/$repo/commits/$branch --jq '.commit.committer.date' 2>/dev/null || echo "ERROR")
+              if [ "$branch_date" == "ERROR" ]; then
+                echo "Failed to fetch creation date for branch: $branch. Skipping..."
+                continue
+              fi
+
+              echo "Creation date for branch $branch: $branch_date"
+
+              # Convert the creation date to a timestamp
+              branch_timestamp=$(date -d "$branch_date" +%s 2>/dev/null || echo "ERROR")
+              if [ "$branch_timestamp" == "ERROR" ]; then
+                echo "Failed to parse creation date for branch: $branch. Skipping..."
+                continue
+              fi
+
+              # Check if the branch is stale (created 5+ minutes ago)
+              if [ "$branch_timestamp" -lt "$cutoff_time" ]; then
+                echo "Deleting branch: $branch from repository: $repo (created more than 5 minutes ago)"
+                gh api -X DELETE /repos/$org/$repo/git/refs/heads/$branch || echo "Failed to delete branch: $branch"
+              else
+                echo "Branch $branch in $repo is not stale (created within the last 5 minutes)."
+              fi
+            done
+          done < repos.csv
+
+
+
+
