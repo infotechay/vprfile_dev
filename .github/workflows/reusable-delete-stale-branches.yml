@@ -339,12 +339,112 @@
 
 
 
-name: Delete Stale Branches Across Organization -- Ferfectly working code
+# name: Delete Stale Branches Across Organization -- Ferfectly working code
+
+# on:
+#   schedule:
+#     - cron: '*/5 * * * *' # Runs every 5 minutes
+#   # workflow_dispatch: # Allows manual triggering of the workflow
+
+# jobs:
+#   delete-stale-branches:
+#     runs-on: ubuntu-latest
+#     steps:
+#       # Step 1: Install GitHub CLI
+#       - name: Install GitHub CLI
+#         run: |
+#           sudo apt-get update
+#           sudo apt-get install -y gh
+
+#       # Step 2: Authenticate GitHub CLI
+#       # - name: Authenticate GitHub CLI
+#       #   env:
+#       #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+#       #   run: |
+#       #     echo $GITHUB_TOKEN | gh auth login --with-token
+
+#       # Step 3: Fetch All Repositories in Organization
+#       - name: Fetch All Organization Repositories
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+#         run: |
+#           org="infotechay" # Replace with your organization name
+#           echo "Fetching all repositories in the organization..."
+#           gh repo list $org --limit 1000 --json name,defaultBranchRef \
+#             --jq '.[] | [.name, .defaultBranchRef.name] | @csv' > repos.csv
+#           echo "Repositories fetched:"
+#           cat repos.csv
+
+#       # Step 4: Delete Stale Branches
+#       - name: Delete Stale Branches Created 5+ Minutes Ago
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+#         run: |
+#           current_time=$(date +%s)
+#           cutoff_time=$(($current_time - 300)) # 5 minutes ago (300 seconds)
+#           org="infotechay" # Replace with your organization name
+
+#           # Read repositories from the CSV
+#           while IFS=, read -r repo default_branch; do
+#             repo=$(echo $repo | tr -d '"')
+#             default_branch=$(echo $default_branch | tr -d '"')
+#             echo "Processing repository: $repo (default branch: $default_branch)"
+
+#             # Fetch branches excluding the default branch and protected branches
+#             raw_branches=$(gh api repos/$org/$repo/branches 2>/dev/null || echo "ERROR")
+#             if [ "$raw_branches" == "ERROR" ]; then
+#               echo "Failed to fetch branches for repository: $repo. Skipping..."
+#               continue
+#             fi
+
+#             branches=$(echo "$raw_branches" | jq -r '.[] | select(.name != "'"$default_branch"'" and .name != "production" and .name != "non-prod") | .name')
+#             if [ -z "$branches" ]; then
+#               echo "No branches found to process in repository: $repo. Skipping..."
+#               continue
+#             fi
+
+#             echo "Branches to process in repository $repo: $branches"
+
+#             # Loop through each branch
+#             for branch in $branches; do
+#               echo "Processing branch: $branch"
+
+#               # Fetch the creation date for the branch
+#               branch_date=$(gh api repos/$org/$repo/commits/$branch --jq '.commit.committer.date' 2>/dev/null || echo "ERROR")
+#               if [ "$branch_date" == "ERROR" ]; then
+#                 echo "Failed to fetch creation date for branch: $branch. Skipping..."
+#                 continue
+#               fi
+
+#               echo "Creation date for branch $branch: $branch_date"
+
+#               # Convert the creation date to a timestamp
+#               branch_timestamp=$(date -d "$branch_date" +%s 2>/dev/null || echo "ERROR")
+#               if [ "$branch_timestamp" == "ERROR" ]; then
+#                 echo "Failed to parse creation date for branch: $branch. Skipping..."
+#                 continue
+#               fi
+
+#               # Check if the branch is stale (created 5+ minutes ago)
+#               if [ "$branch_timestamp" -lt "$cutoff_time" ]; then
+#                 echo "Deleting branch: $branch from repository: $repo (created more than 5 minutes ago)"
+#                 gh api -X DELETE /repos/$org/$repo/git/refs/heads/$branch || echo "Failed to delete branch: $branch"
+#               else
+#                 echo "Branch $branch in $repo is not stale (created within the last 5 minutes)."
+#               fi
+#             done
+#           done < repos.csv
+
+
+
+
+
+name: Delete Stale Branches for Specific Repositories
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # Runs every 5 minutes
-  # workflow_dispatch: # Allows manual triggering of the workflow
+    - cron: '*/5 * * * *' # Every 5 minutes
+  workflow_dispatch: # Allows manual trigger for testing
 
 jobs:
   delete-stale-branches:
@@ -357,83 +457,54 @@ jobs:
           sudo apt-get install -y gh
 
       # Step 2: Authenticate GitHub CLI
-      # - name: Authenticate GitHub CLI
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-      #   run: |
-      #     echo $GITHUB_TOKEN | gh auth login --with-token
-
-      # Step 3: Fetch All Repositories in Organization
-      - name: Fetch All Organization Repositories
+      - name: Authenticate GitHub CLI
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          org="infotechay" # Replace with your organization name
-          echo "Fetching all repositories in the organization..."
-          gh repo list $org --limit 1000 --json name,defaultBranchRef \
-            --jq '.[] | [.name, .defaultBranchRef.name] | @csv' > repos.csv
-          echo "Repositories fetched:"
-          cat repos.csv
+          echo $GITHUB_TOKEN | gh auth login --with-token
 
-      # Step 4: Delete Stale Branches
-      - name: Delete Stale Branches Created 5+ Minutes Ago
+      # Step 3: Process Specific Repositories
+      - name: Delete Stale Branches from Specific Repositories
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          current_time=$(date +%s)
-          cutoff_time=$(($current_time - 300)) # 5 minutes ago (300 seconds)
-          org="infotechay" # Replace with your organization name
+          # Define the list of repositories for testing
+          repos=(
+            "infotechay/Repo1"
+            "infotechay/tomcat_udemy"
+            "infotechay/gke-cicd"
+          )
 
-          # Read repositories from the CSV
-          while IFS=, read -r repo default_branch; do
-            repo=$(echo $repo | tr -d '"')
-            default_branch=$(echo $default_branch | tr -d '"')
-            echo "Processing repository: $repo (default branch: $default_branch)"
+          # Define time cutoff (5 minutes ago)
+          current_date=$(date +%s)
+          cutoff_date=$(date -d "5 minutes ago" +%s)
 
-            # Fetch branches excluding the default branch and protected branches
-            raw_branches=$(gh api repos/$org/$repo/branches 2>/dev/null || echo "ERROR")
-            if [ "$raw_branches" == "ERROR" ]; then
-              echo "Failed to fetch branches for repository: $repo. Skipping..."
-              continue
-            fi
+          for repo in "${repos[@]}"; do
+            echo "Processing repository: $repo"
 
-            branches=$(echo "$raw_branches" | jq -r '.[] | select(.name != "'"$default_branch"'" and .name != "production" and .name != "non-prod") | .name')
-            if [ -z "$branches" ]; then
-              echo "No branches found to process in repository: $repo. Skipping..."
-              continue
-            fi
+            # Fetch branches excluding default, production, and non-prod
+            branches=$(gh api repos/$repo/branches --jq '.[] | select(.name != "main" and .name != "master" and .name != "production" and .name != "non-prod") | .name')
 
-            echo "Branches to process in repository $repo: $branches"
-
-            # Loop through each branch
             for branch in $branches; do
-              echo "Processing branch: $branch"
+              echo "Checking branch: $branch in repository: $repo"
 
-              # Fetch the creation date for the branch
-              branch_date=$(gh api repos/$org/$repo/commits/$branch --jq '.commit.committer.date' 2>/dev/null || echo "ERROR")
-              if [ "$branch_date" == "ERROR" ]; then
-                echo "Failed to fetch creation date for branch: $branch. Skipping..."
+              # Get the commit date of the branch
+              branch_date=$(gh api repos/$repo/commits/$branch --jq '.commit.committer.date' | xargs -I {} date -d {} +%s)
+
+              if [ -z "$branch_date" ]; then
+                echo "Failed to fetch commit date for branch: $branch. Skipping..."
                 continue
               fi
 
-              echo "Creation date for branch $branch: $branch_date"
-
-              # Convert the creation date to a timestamp
-              branch_timestamp=$(date -d "$branch_date" +%s 2>/dev/null || echo "ERROR")
-              if [ "$branch_timestamp" == "ERROR" ]; then
-                echo "Failed to parse creation date for branch: $branch. Skipping..."
-                continue
-              fi
-
-              # Check if the branch is stale (created 5+ minutes ago)
-              if [ "$branch_timestamp" -lt "$cutoff_time" ]; then
-                echo "Deleting branch: $branch from repository: $repo (created more than 5 minutes ago)"
-                gh api -X DELETE /repos/$org/$repo/git/refs/heads/$branch || echo "Failed to delete branch: $branch"
+              # Check if the branch is stale
+              if [ "$branch_date" -lt "$cutoff_date" ]; then
+                echo "Deleting stale branch: $branch from repository: $repo"
+                gh api -X DELETE /repos/$repo/git/refs/heads/$branch || echo "Failed to delete branch: $branch"
               else
-                echo "Branch $branch in $repo is not stale (created within the last 5 minutes)."
+                echo "Branch $branch in $repo is not stale."
               fi
             done
-          done < repos.csv
+          done
 
 
 
