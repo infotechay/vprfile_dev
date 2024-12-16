@@ -358,8 +358,27 @@ jobs:
       # - name: Authenticate GitHub CLI
       #   env:
       #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-      #   run: |
-      #     echo $GITHUB_TOKEN | gh auth login --with-token
+      #   run: name: Delete Stale Branches Across Organization
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at midnight UTC
+  workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  delete-stale-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+
+      - name: Authenticate GitHub CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          echo $GITHUB_TOKEN | gh auth login --with-token
 
       - name: Fetch All Organization Repositories
         env:
@@ -382,7 +401,6 @@ jobs:
           while IFS=, read -r repo default_branch; do
             repo=$(echo $repo | tr -d '"')
             default_branch=$(echo $default_branch | tr -d '"')
-
             echo "Processing repository: $repo (default branch: $default_branch)"
             
             # Fetch branches excluding protected ones
@@ -417,6 +435,7 @@ jobs:
               fi
             done
           done < repos.csv
+
 
 
 
