@@ -614,7 +614,6 @@
 #           done
 
 
-
 name: Delete Stale Branches Across Organization
 
 on:
@@ -639,14 +638,14 @@ jobs:
       #   run: |
       #     echo $GITHUB_TOKEN | gh auth login --with-token
 
-      # Step 3: Define List of Specific Repositories
+      # Step 3: Define Target Repositories
       - name: Define Target Repositories
         id: set-repos
         run: |
           # Define repositories to process (update with your test repository names)
-          echo 'target_repositories="Repo1 tomcat_udemy gke-cicd"' >> $GITHUB_ENV
+          echo 'target_repositories=("Repo1" "tomcat_udemy" "gke-cicd")' >> $GITHUB_ENV
 
-      # Step 4: Delete Stale Feature Branches (Unused for 6 Months)
+      # Step 4: Delete Stale Feature Branches
       - name: Delete Stale Feature Branches
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
@@ -663,6 +662,8 @@ jobs:
 
           # Process each repository in the list
           for repo in "${repositories[@]}"; do
+            # Sanitize repository name by removing any extra quotes or whitespace
+            repo=$(echo "$repo" | sed 's/^"//; s/"$//; s/^ *//; s/ *$//')
             echo "Processing repository: $repo"
 
             # Fetch branches excluding default and protected ones
