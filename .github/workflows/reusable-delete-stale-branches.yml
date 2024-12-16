@@ -456,12 +456,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gh
 
-      # Step 2: Authenticate GitHub CLI
-      - name: Authenticate GitHub CLI
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-        run: |
-          echo $GITHUB_TOKEN | gh auth login --with-token
+      # # Step 2: Authenticate GitHub CLI
+      # - name: Authenticate GitHub CLI
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      #   run: |
+      #     echo $GITHUB_TOKEN | gh auth login --with-token
 
       # Step 3: Process Specific Repositories
       - name: Delete Stale Branches from Specific Repositories
