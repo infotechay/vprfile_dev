@@ -508,7 +508,7 @@
 
 
 
-
+## delete only branches whic is avaible last 6 months, delete branch/ , scan in org and delete
 name: Delete Stale Branches Across Organization
 
 on:
@@ -533,32 +533,27 @@ jobs:
       #   run: |
       #     echo $GITHUB_TOKEN | gh auth login --with-token
 
-      # Step 3: Fetch All Repositories in Organization
-      - name: Fetch All Organization Repositories
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      # Step 3: Define List of Specific Repositories to Test
+      - name: Define Target Repositories
         run: |
-          org="infotechay" # Replace with your organization name
-          echo "Fetching all repositories in the organization..."
-          gh repo list $org --limit 1000 --json name,defaultBranchRef \
-            --jq '.[] | [.name, .defaultBranchRef.name] | @csv' > repos.csv
-          echo "Repositories fetched:"
-          cat repos.csv
+          # List of repositories to test (modify these as needed for testing)
+          target_repositories=("repo1" "repo2" "repo3" "repo4" "repo5" "repo6" "repo7")
 
-      # Step 4: Delete Stale Feature Branches
-      - name: Delete Stale Feature Branches
+          # Print the repositories that will be processed
+          echo "Processing the following repositories for testing: ${target_repositories[@]}"
+
+      # Step 4: Delete Stale Feature Branches Created in the Last 5 Minutes (For Specific Repositories)
+      - name: Delete Feature Branches Created in the Last 5 Minutes
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           current_time=$(date +%s)
-          cutoff_time=$(($current_time - 180*24*60*60)) # 6 months ago (180 days)
+          cutoff_time=$(($current_time - 300)) # 5 minutes ago (300 seconds)
           org="infotechay" # Replace with your organization name
 
-          # Read repositories from the CSV
-          while IFS=, read -r repo default_branch; do
-            repo=$(echo $repo | tr -d '"')
-            default_branch=$(echo $default_branch | tr -d '"')
-            echo "Processing repository: $repo (default branch: $default_branch)"
+          # Loop through each specific repository in the target list
+          for repo in "${target_repositories[@]}"; do
+            echo "Processing repository: $repo"
 
             # Fetch branches excluding the default branch and protected branches
             raw_branches=$(gh api repos/$org/$repo/branches 2>/dev/null || echo "ERROR")
@@ -567,6 +562,7 @@ jobs:
               continue
             fi
 
+            # Filter branches to only process feature branches
             branches=$(echo "$raw_branches" | jq -r '.[] | select(.name != "'"$default_branch"'" and .name != "production" and .name != "non-prod" and .name != null) | .name')
             if [ -z "$branches" ]; then
               echo "No feature branches found to process in repository: $repo. Skipping..."
@@ -583,7 +579,7 @@ jobs:
 
             echo "Feature branches to process in repository $repo: $feature_branches"
 
-            # Loop through each branch
+            # Loop through each feature branch
             for branch in $feature_branches; do
               echo "Processing branch: $branch"
 
@@ -603,33 +599,16 @@ jobs:
                 continue
               fi
 
-              # Check if the branch is older than 6 months
-              if [ "$branch_timestamp" -lt "$cutoff_time" ]; then
-                # Fetch the last commit date to determine if the branch is unused
-                last_commit_date=$(gh api repos/$org/$repo/commits/$branch --jq '.[0].commit.committer.date' 2>/dev/null || echo "ERROR")
-                if [ "$last_commit_date" == "ERROR" ]; then
-                  echo "Failed to fetch last commit date for branch: $branch. Skipping..."
-                  continue
-                fi
-
-                last_commit_timestamp=$(date -d "$last_commit_date" +%s 2>/dev/null || echo "ERROR")
-                if [ "$last_commit_timestamp" == "ERROR" ]; then
-                  echo "Failed to parse last commit date for branch: $branch. Skipping..."
-                  continue
-                fi
-
-                # Check if the branch has been unused for a while (last commit over 6 months ago)
-                if [ "$last_commit_timestamp" -lt "$cutoff_time" ]; then
-                  echo "Deleting branch: $branch from repository: $repo (no commits in the last 6 months)"
-                  gh api -X DELETE /repos/$org/$repo/git/refs/heads/$branch || echo "Failed to delete branch: $branch"
-                else
-                  echo "Branch $branch in $repo has recent activity (used in the last 6 months)."
-                fi
+              # Check if the branch was created in the last 5 minutes
+              if [ "$branch_timestamp" -ge "$cutoff_time" ]; then
+                echo "Deleting branch: $branch from repository: $repo (created in the last 5 minutes)"
+                gh api -X DELETE /repos/$org/$repo/git/refs/heads/$branch || echo "Failed to delete branch: $branch"
               else
-                echo "Branch $branch in $repo is not stale (created within the last 6 months)."
+                echo "Branch $branch in $repo is older than 5 minutes. Skipping..."
               fi
             done
-          done < repos.csv
+          done
+
 
 
           
