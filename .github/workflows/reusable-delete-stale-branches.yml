@@ -339,7 +339,7 @@
 
 
 
-name: Delete Stale Branches Across Organization using gh cli
+name: Delete Stale Branches Across Organization
 
 on:
   schedule:
@@ -356,21 +356,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gh
 
-      # # Step 2: Authenticate GitHub CLI
-      # - name: Authenticate GitHub CLI
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }} # Replace with your Personal Access Token stored in secrets
-      #   run: |
-      #     echo $GITHUB_TOKEN | gh auth login --with-token
+      # Step 2: Authenticate GitHub CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }} # Your PAT stored in secrets
+        run: |
+          echo $GITHUB_TOKEN | gh auth login --with-token
 
       # Step 3: Fetch All Repositories in Organization
       - name: Fetch All Organization Repositories
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          org="infotechay" # Update with your organization name
+          org="infotechay" # Replace with your organization name
           echo "Fetching all repositories in the organization..."
-          gh repo list $org --limit 1000 --json name,defaultBranchRef --jq '.[] | [.name, .defaultBranchRef.name] | @csv' > repos.csv
+          gh repo list $org --limit 1000 --json name,defaultBranchRef \
+            --jq '.[] | [.name, .defaultBranchRef.name] | @csv' > repos.csv
           echo "Repositories fetched:"
           cat repos.csv
 
@@ -382,15 +380,18 @@ jobs:
           current_date=$(date +%s)
           cutoff_date=$(date -d "60 days ago" +%s)
 
+          # Read repositories from the CSV
           while IFS=, read -r repo default_branch; do
             repo=$(echo $repo | tr -d '"')
             default_branch=$(echo $default_branch | tr -d '"')
             echo "Processing repository: $repo (default branch: $default_branch)"
 
             # Fetch branches excluding protected ones
-            branches=$(gh api repos/$org/$repo/branches --jq '.[] | select(.name | test("^(?!('"$default_branch"|production|non-prod)$").*$")) | .name')
+            branches=$(gh api repos/$org/$repo/branches --jq '.[] | select(.name != "'"$default_branch"'" and .name != "production" and .name != "non-prod") | .name')
 
             for branch in $branches; do
+              echo "Checking branch: $branch in repository: $repo"
+
               # Get the commit date of the branch
               branch_date=$(gh api repos/$org/$repo/commits/$branch --jq '.commit.committer.date' | xargs -I {} date -d {} +%s)
 
@@ -403,6 +404,7 @@ jobs:
               fi
             done
           done < repos.csv
+
 
 
 
