@@ -1,0 +1,22 @@
+      # - name: Fetch Repositories with Debugging
+      #   env:
+      #     PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+      #     org: "infotechay" # Replace with the correct org name
+      #   run: |
+      #     echo "Fetching repositories for organization: $org"
+      #     response=$(curl -s -H "Authorization: Bearer $PAT_TOKEN" -H "Accept: application/vnd.github+json" \
+      #       "https://api.github.com/orgs/$org/repos?per_page=100")
+      #     echo "$response" > response.json
+      #     echo "Response:"
+      #     cat response.json
+          
+      #     # Check if the response contains "message" for errors
+      #     if echo "$response" | grep -q '"message"'; then
+      #       echo "Error fetching repositories:"
+      #       cat response.json
+      #       exit 1
+      #     fi
+
+      #     jq -r '.[] | select(.fork == false) | .full_name' response.json > repos.txt
+      #     echo "Repositories found:"
+      #     cat repos.txt
