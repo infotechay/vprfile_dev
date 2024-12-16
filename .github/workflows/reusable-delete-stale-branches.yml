@@ -358,25 +358,6 @@ jobs:
       # - name: Authenticate GitHub CLI
       #   env:
       #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-      #   run: name: Delete Stale Branches Across Organization
-
-on:
-  schedule:
-    - cron: '0 0 * * *' # Runs daily at midnight UTC
-  workflow_dispatch: # Allows manual triggering of the workflow
-
-jobs:
-  delete-stale-branches:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install GitHub CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gh
-
-      # - name: Authenticate GitHub CLI
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       #   run: |
       #     echo $GITHUB_TOKEN | gh auth login --with-token
 
@@ -435,10 +416,6 @@ jobs:
               fi
             done
           done < repos.csv
-
-
-
-
 
 
 
