@@ -365,6 +365,8 @@ jobs:
 
       # Step 3: Fetch All Repositories in Organization
       - name: Fetch All Organization Repositories
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           org="infotechay" # Update with your organization name
           echo "Fetching all repositories in the organization..."
