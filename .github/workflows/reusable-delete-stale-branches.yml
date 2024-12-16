@@ -350,60 +350,78 @@ jobs:
   delete-stale-branches:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Install GitHub CLI
       - name: Install GitHub CLI
         run: |
           sudo apt-get update
           sudo apt-get install -y gh
 
-      # - name: Authenticate GitHub CLI
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-      #   run: |
-      #     echo $GITHUB_TOKEN | gh auth login --with-token
+      # Step 2: Authenticate GitHub CLI
+      - name: Authenticate GitHub CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          echo $GITHUB_TOKEN | gh auth login --with-token
 
+      # Step 3: Fetch All Repositories in Organization
       - name: Fetch All Organization Repositories
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          org="infotechay"
+          org="infotechay" # Replace with your organization name
           echo "Fetching all repositories in the organization..."
           gh repo list $org --limit 1000 --json name,defaultBranchRef \
             --jq '.[] | [.name, .defaultBranchRef.name] | @csv' > repos.csv
           echo "Repositories fetched:"
           cat repos.csv
 
+      # Step 4: Delete Stale Branches
       - name: Delete Stale Branches Across Repositories
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           current_date=$(date +%s)
           cutoff_date=$(date -d "60 days ago" +%s)
+          org="infotechay" # Replace with your organization name
 
+          # Read repositories from the CSV
           while IFS=, read -r repo default_branch; do
             repo=$(echo $repo | tr -d '"')
             default_branch=$(echo $default_branch | tr -d '"')
             echo "Processing repository: $repo (default branch: $default_branch)"
-            
-            # Fetch branches excluding protected ones
-            branches=$(gh api repos/$org/$repo/branches --jq '.[] | select(.name != "'"$default_branch"'" and .name != "production" and .name != "non-prod") | .name' 2>/dev/null || echo "ERROR")
-            if [ "$branches" == "ERROR" ]; then
-              echo "Failed to fetch branches for $repo. Skipping..."
+
+            # Fetch branches excluding the default branch and protected branches
+            raw_branches=$(gh api repos/$org/$repo/branches 2>/dev/null || echo "ERROR")
+            if [ "$raw_branches" == "ERROR" ]; then
+              echo "Failed to fetch branches for repository: $repo. Skipping..."
               continue
             fi
 
-            for branch in $branches; do
-              echo "Checking branch: $branch in repository: $repo"
+            branches=$(echo "$raw_branches" | jq -r '.[] | select(.name != "'"$default_branch"'" and .name != "production" and .name != "non-prod") | .name')
+            if [ -z "$branches" ]; then
+              echo "No branches found to process in repository: $repo. Skipping..."
+              continue
+            fi
 
-              # Get the commit date of the branch
+            echo "Branches to process in repository $repo: $branches"
+
+            # Loop through each branch
+            for branch in $branches; do
+              echo "Processing branch: $branch"
+
+              # Fetch the commit date for the branch
               branch_date=$(gh api repos/$org/$repo/commits/$branch --jq '.commit.committer.date' 2>/dev/null || echo "ERROR")
               if [ "$branch_date" == "ERROR" ]; then
                 echo "Failed to fetch commit date for branch: $branch. Skipping..."
                 continue
               fi
 
+              echo "Commit date for branch $branch: $branch_date"
+
+              # Convert the commit date to a timestamp
               branch_timestamp=$(date -d "$branch_date" +%s 2>/dev/null || echo "ERROR")
               if [ "$branch_timestamp" == "ERROR" ]; then
-                echo "Failed to parse date for branch: $branch. Skipping..."
+                echo "Failed to parse commit date for branch: $branch. Skipping..."
                 continue
               fi
 
@@ -416,6 +434,7 @@ jobs:
               fi
             done
           done < repos.csv
+
 
 
 
