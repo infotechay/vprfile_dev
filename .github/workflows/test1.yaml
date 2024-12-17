@@ -448,3 +448,113 @@ jobs:
               fi
             done
           done
+
+
+
+
+
+name: Delete Stale Branches
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at midnight
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  delete-stale-branches:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Install GitHub CLI and jq
+      - name: Install GitHub CLI and jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh jq
+
+      # Step 2: Authenticate GitHub CLI
+      - name: Authenticate GitHub CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          echo $GITHUB_TOKEN | gh auth login --with-token
+
+      # Step 3: Delete Stale Branches
+      - name: Delete Stale Branches
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          # Define cutoff time (6 months ago in seconds)
+          cutoff_time=$(date -d "6 months ago" +%s)
+          echo "Cutoff time for stale branches: $cutoff_time (6 months ago)"
+
+          # Define repositories to process
+          repositories=("infotechay/mnc-fancy-nano")
+
+          # Loop through each repository
+          for repo in "${repositories[@]}"; do
+            echo "Processing repository: $repo"
+
+            # Fetch all branches using pagination
+            page=1
+            while : ; do
+              echo "Fetching branches page $page for repository: $repo"
+              raw_branches=$(gh api repos/$repo/branches --paginate --page $page 2>&1 || echo "ERROR")
+              
+              # Handle API failure
+              if [[ "$raw_branches" == "ERROR" ]]; then
+                echo "Failed to fetch branches for repository: $repo. Skipping..."
+                break
+              fi
+
+              # Validate JSON response
+              if ! echo "$raw_branches" | jq empty >/dev/null 2>&1; then
+                echo "Invalid JSON received for repository: $repo. Skipping..."
+                break
+              fi
+
+              # Extract branch names
+              branches=$(echo "$raw_branches" | jq -r '.[].name')
+              if [[ -z "$branches" ]]; then
+                echo "No branches found on page $page for repository: $repo."
+                break
+              fi
+
+              # Process each branch
+              for branch in $branches; do
+                echo "Processing branch: $branch"
+
+                # Skip important branches
+                if [[ "$branch" == "production" || "$branch" == "non-prod" || "$branch" == "development" ]]; then
+                  echo "Skipping important branch: $branch"
+                  continue
+                fi
+
+                # Fetch the last commit date for the branch
+                commit_date=$(gh api repos/$repo/commits/$branch --jq '.commit.committer.date' 2>/dev/null || echo "ERROR")
+                if [[ "$commit_date" == "ERROR" ]]; then
+                  echo "Failed to fetch commit date for branch: $branch. Skipping..."
+                  continue
+                fi
+
+                # Convert commit date to timestamp
+                commit_timestamp=$(date -d "$commit_date" +%s 2>/dev/null || echo "ERROR")
+                if [[ "$commit_timestamp" == "ERROR" ]]; then
+                  echo "Failed to parse commit date for branch: $branch. Skipping..."
+                  continue
+                fi
+
+                # Check if the branch is stale (older than 6 months)
+                if [[ "$commit_timestamp" -le "$cutoff_time" ]]; then
+                  echo "Deleting stale branch: $branch (last commit: $commit_date)"
+                  gh api -X DELETE repos/$repo/git/refs/heads/$branch || echo "Failed to delete branch: $branch"
+                else
+                  echo "Branch $branch is not stale (last commit: $commit_date). Skipping..."
+                fi
+              done
+
+              # Exit pagination loop if no more results
+              if [[ $(echo "$raw_branches" | jq 'length') -lt 30 ]]; then
+                break
+              fi
+              ((page++))
+            done
+          done
