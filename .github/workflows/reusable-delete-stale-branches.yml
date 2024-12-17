@@ -632,8 +632,7 @@ jobs:
           sudo apt-get install -y gh
 
       # Step 2: Authenticate GitHub CLI
-      # - name: Authenticate GitHub CLI
-      #   env:
+      # env:
       #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       #   run: |
       #     echo $GITHUB_TOKEN | gh auth login --with-token
@@ -643,27 +642,20 @@ jobs:
         id: set-repos
         run: |
           # Define repositories to process (update with your test repository names)
-          echo 'target_repositories=("Repo1" "tomcat_udemy" "gke-cicd")' >> $GITHUB_ENV
+          echo 'Repo1 gke-cicd tomcat_udemy' > repositories.txt
 
       # Step 4: Delete Stale Feature Branches
       - name: Delete Stale Feature Branches
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-          target_repositories: ${{ env.target_repositories }}
         run: |
           org="infotechay" # Replace with your organization name
           cutoff_date=$(date -d "6 months ago" +%s) # 6 months ago
 
-          # Convert the space-separated list of repositories into an array
-          repositories=($target_repositories)
-
-          # Excluded branch names
-          excluded_branches="main production non-prod development master"
-
-          # Process each repository in the list
-          for repo in "${repositories[@]}"; do
-            # Sanitize repository name by removing any extra quotes or whitespace
-            repo=$(echo "$repo" | sed 's/^"//; s/"$//; s/^ *//; s/ *$//')
+          # Read the list of repositories from the file
+          while read -r repo; do
+            # Sanitize repository name by removing any extra quotes, parentheses, or whitespace
+            repo=$(echo "$repo" | sed 's/[(")]//g; s/^ *//; s/ *$//')
             echo "Processing repository: $repo"
 
             # Fetch branches excluding default and protected ones
@@ -674,6 +666,7 @@ jobs:
             fi
 
             # Filter branches that start with "feature/" and are not in excluded list
+            excluded_branches="default production non-prod development main"
             feature_branches=$(echo "$branches" | grep -E '^feature/' | grep -v -E "($(echo $excluded_branches | sed 's/ /|/g'))")
             if [ -z "$feature_branches" ]; then
               echo "No feature branches found in repository: $repo. Skipping..."
@@ -708,4 +701,4 @@ jobs:
                 echo "Branch $branch in $repo is not stale. Skipping..."
               fi
             done
-          done
+          done < repositories.txt
