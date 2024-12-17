@@ -614,7 +614,12 @@
 #           done
 
 
-name: Delete Stale Branches Across Organization
+
+
+
+
+
+
 
 on:
   schedule:
@@ -629,76 +634,75 @@ jobs:
       - name: Install GitHub CLI
         run: |
           sudo apt-get update
-          sudo apt-get install -y gh
+          sudo apt-get install -y gh jq
 
-      # Step 2: Authenticate GitHub CLI
-      # env:
-      #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-      #   run: |
-      #     echo $GITHUB_TOKEN | gh auth login --with-token
-
-      # Step 3: Define Target Repositories
+      # Step 2: Define List of Target Repositories
       - name: Define Target Repositories
-        id: set-repos
         run: |
-          # Define repositories to process (update with your test repository names)
-          echo 'Repo1 gke-cicd tomcat_udemy' > repositories.txt
+          # List of repositories to test (modify as needed)
+          target_repositories=(
+               "infotechay/Repo1"
+               "infotechay/tomcat_udemy"
+               "infotechay/gke-cicd"
+          )
 
-      # Step 4: Delete Stale Feature Branches
+          # Export the list for further steps
+          echo "TARGET_REPOS=${target_repositories[@]}" >> $GITHUB_ENV
+
+      # Step 3: Delete Feature Stale Branches Older Than 6 Months
       - name: Delete Stale Feature Branches
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          org="infotechay" # Replace with your organization name
-          cutoff_date=$(date -d "6 months ago" +%s) # 6 months ago
+          # Cutoff time for stale branches (6 months ago)
+          cutoff_time=$(date --date="6 months ago" +%s)
+          org="infotechay" # Replace with your org name
 
-          # Read the list of repositories from the file
-          while read -r repo; do
-            # Sanitize repository name by removing any extra quotes, parentheses, or whitespace
-            repo=$(echo "$repo" | sed 's/[(")]//g; s/^ *//; s/ *$//')
+          # Loop through each repository in the list
+          for repo in $TARGET_REPOS; do
             echo "Processing repository: $repo"
 
-            # Fetch branches excluding default and protected ones
-            branches=$(gh api repos/$org/$repo/branches --jq '.[] | select(.protected == false) | .name' 2>/dev/null || echo "ERROR")
-            if [ "$branches" == "ERROR" ]; then
-              echo "Failed to fetch branches for repository: $repo. Skipping..."
+            # Fetch all branches except protected or default branches
+            raw_branches=$(gh api repos/$repo/branches 2>/dev/null || echo "ERROR")
+            if [ "$raw_branches" == "ERROR" ]; then
+              echo "Failed to fetch branches for $repo. Skipping..."
               continue
             fi
 
-            # Filter branches that start with "feature/" and are not in excluded list
-            excluded_branches="default production non-prod development main"
-            feature_branches=$(echo "$branches" | grep -E '^feature/' | grep -v -E "($(echo $excluded_branches | sed 's/ /|/g'))")
+            # Filter branches starting with "feature/"
+            feature_branches=$(echo "$raw_branches" | jq -r '.[] | select(.name | startswith("feature/")) | .name')
+
             if [ -z "$feature_branches" ]; then
-              echo "No feature branches found in repository: $repo. Skipping..."
+              echo "No feature branches to process in repository $repo."
               continue
             fi
 
-            echo "Feature branches to process in repository $repo: $feature_branches"
-
-            # Process each feature branch
+            # Loop through each feature branch
             for branch in $feature_branches; do
               echo "Processing branch: $branch"
 
-              # Get the latest commit date for the branch
-              commit_date=$(gh api repos/$org/$repo/commits/$branch --jq '.commit.committer.date' 2>/dev/null || echo "ERROR")
-              if [ "$commit_date" == "ERROR" ]; then
+              # Get the branch creation date
+              branch_date=$(gh api repos/$repo/commits/$branch --jq '.commit.committer.date' 2>/dev/null || echo "ERROR")
+              if [ "$branch_date" == "ERROR" ]; then
                 echo "Failed to fetch commit date for branch: $branch. Skipping..."
                 continue
               fi
 
-              # Convert commit date to timestamp
-              commit_timestamp=$(date -d "$commit_date" +%s 2>/dev/null || echo "ERROR")
-              if [ "$commit_timestamp" == "ERROR" ]; then
-                echo "Failed to parse commit date for branch: $branch. Skipping..."
+              # Convert the branch date to a timestamp
+              branch_timestamp=$(date -d "$branch_date" +%s 2>/dev/null || echo "ERROR")
+              if [ "$branch_timestamp" == "ERROR" ]; then
+                echo "Failed to parse date for branch: $branch. Skipping..."
                 continue
               fi
 
-              # Check if the branch is stale (no commits in the last 6 months)
-              if [ "$commit_timestamp" -lt "$cutoff_date" ]; then
-                echo "Deleting stale branch: $branch (unused for 6+ months)"
-                gh api -X DELETE /repos/$org/$repo/git/refs/heads/$branch || echo "Failed to delete branch: $branch"
+              # Check if branch is older or equal to 6 months
+              if [ "$branch_timestamp" -le "$cutoff_time" ]; then
+                echo "Deleting stale branch: $branch (older than 6 months)"
+                gh api -X DELETE /repos/$repo/git/refs/heads/$branch || echo "Failed to delete branch: $branch"
               else
-                echo "Branch $branch in $repo is not stale. Skipping..."
+                echo "Branch $branch is not stale. Skipping..."
               fi
             done
-          done < repositories.txt
+          done
+
+
