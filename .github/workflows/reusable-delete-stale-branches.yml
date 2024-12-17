@@ -630,8 +630,8 @@ jobs:
   delete-stale-branches:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Install GitHub CLI
-      - name: Install GitHub CLI
+      # Step 1: Install GitHub CLI and jq
+      - name: Install GitHub CLI and jq
         run: |
           sudo apt-get update
           sudo apt-get install -y gh jq
@@ -649,7 +649,7 @@ jobs:
           # Export the list for further steps
           echo "TARGET_REPOS=${target_repositories[@]}" >> $GITHUB_ENV
 
-      # Step 3: Delete Feature Stale Branches Older Than 6 Months
+      # Step 3: Delete Stale Feature Branches Older Than 6 Months
       - name: Delete Stale Feature Branches
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
@@ -658,11 +658,25 @@ jobs:
           cutoff_time=$(date --date="6 months ago" +%s)
           org="infotechay" # Replace with your org name
 
+          # Define branches to exclude
+          excluded_branches=("production" "non-prod" "development" "main")
+
+          # Function to check if a branch is in the exclusion list
+          is_excluded_branch() {
+            local branch_name=$1
+            for excluded in "${excluded_branches[@]}"; do
+              if [[ "$branch_name" == "$excluded" ]]; then
+                return 0 # It's excluded
+              fi
+            done
+            return 1 # Not excluded
+          }
+
           # Loop through each repository in the list
           for repo in $TARGET_REPOS; do
             echo "Processing repository: $repo"
 
-            # Fetch all branches except protected or default branches
+            # Fetch all branches
             raw_branches=$(gh api repos/$repo/branches 2>/dev/null || echo "ERROR")
             if [ "$raw_branches" == "ERROR" ]; then
               echo "Failed to fetch branches for $repo. Skipping..."
@@ -679,6 +693,12 @@ jobs:
 
             # Loop through each feature branch
             for branch in $feature_branches; do
+              # Skip excluded branches
+              if is_excluded_branch "$branch"; then
+                echo "Skipping important branch: $branch"
+                continue
+              fi
+
               echo "Processing branch: $branch"
 
               # Get the branch creation date
@@ -704,5 +724,6 @@ jobs:
               fi
             done
           done
+
 
 
