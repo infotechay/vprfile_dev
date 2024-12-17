@@ -685,3 +685,108 @@ jobs:
               fi
             done
           done
+
+
+
+
+
+
+
+
+- name: Delete Stale Branches
+  env:
+    GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+  run: |
+    # Calculate cutoff time (6 months ago in seconds)
+    cutoff_time=$(date -d "6 months ago" +%s)
+    echo "Cutoff time for stale branches: $cutoff_time (6 months ago)"
+
+    # Loop through each repository
+    for repo in ${{ env.repos }}; do
+      echo "Processing repository: $repo"
+
+      # Fetch all branches using pagination
+      page=1
+      all_branches=()
+
+      while :; do
+        echo "Fetching page $page of branches for repository: $repo"
+
+        # Fetch branches for the current page (max 100 per page)
+        raw_branches=$(gh api repos/$repo/branches -F per_page=100 -F page=$page 2>&1 || echo "ERROR")
+
+        # Debug: Print the raw API response
+        echo "Raw response for page $page:"
+        echo "$raw_branches"
+
+        # Handle API errors
+        if [[ "$raw_branches" == "ERROR" || "$raw_branches" == *"Not Found"* || -z "$raw_branches" ]]; then
+          echo "Failed to fetch branches for repository: $repo. Skipping..."
+          break
+        fi
+
+        # Validate JSON response
+        if ! echo "$raw_branches" | jq empty >/dev/null 2>&1; then
+          echo "Invalid JSON received for repository: $repo. Response:"
+          echo "$raw_branches"
+          break
+        fi
+
+        # Extract branch names from the current page
+        branches=$(echo "$raw_branches" | jq -r '.[].name' || echo "")
+        if [[ -z "$branches" ]]; then
+          echo "No more branches to fetch. Exiting pagination."
+          break
+        fi
+
+        # Append branches to the full list
+        all_branches+=($branches)
+        echo "Fetched branches on page $page for repository $repo"
+
+        # Check if we reached the last page
+        [[ $(echo "$branches" | wc -l) -lt 100 ]] && break
+
+        ((page++))
+      done
+
+      # Validate branches
+      if [[ ${#all_branches[@]} -eq 0 ]]; then
+        echo "No branches found in repository: $repo."
+        continue
+      fi
+
+      echo "Total branches fetched in repository: ${#all_branches[@]}"
+
+      # Process each branch
+      for branch in "${all_branches[@]}"; do
+        echo "Processing branch: $branch"
+
+        # Exclude important branches
+        if [[ "$branch" == "production" || "$branch" == "non-prod" || "$branch" == "development" ]]; then
+          echo "Skipping important branch: $branch"
+          continue
+        fi
+
+        # Get branch last commit date
+        branch_date=$(gh api repos/$repo/commits/$branch --jq '.commit.committer.date' 2>&1 || echo "ERROR")
+        if [[ "$branch_date" == "ERROR" ]]; then
+          echo "Failed to fetch commit date for branch: $branch. Skipping..."
+          continue
+        fi
+
+        # Convert date to timestamp
+        branch_timestamp=$(date -d "$branch_date" +%s 2>/dev/null || echo "ERROR")
+        if [[ "$branch_timestamp" == "ERROR" ]]; then
+          echo "Failed to parse date for branch: $branch. Skipping..."
+          continue
+        fi
+
+        # Check if branch is stale (older than 6 months)
+        if [[ "$branch_timestamp" -le "$cutoff_time" ]]; then
+          echo "Deleting stale branch: $branch (older than 6 months)"
+          gh api -X DELETE repos/$repo/git/refs/heads/$branch || echo "Failed to delete branch: $branch"
+        else
+          echo "Branch $branch is not stale. Skipping..."
+        fi
+      done
+    done
