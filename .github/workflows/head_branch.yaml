@@ -49,7 +49,7 @@ jobs:
         id: set-repos
         run: |
           # Define your repositories here
-          target_repositories=("infotechay/Repo1")
+          target_repositories=("infotechay/Repo1" "infotechay/gke-cicd")
           echo "repos=${target_repositories[@]}" >> $GITHUB_ENV
           echo "Repositories to process:"
           for repo in "${target_repositories[@]}"; do
