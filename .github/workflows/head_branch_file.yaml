@@ -23,26 +23,28 @@ jobs:
         run: |
           # Read repositories from environment
           IFS=' ' read -r -a repos <<< "$repos"
-          required_branches=("non-prod")
+          required_branches=("main" "development" "non-prod")
 
           for repo in "${repos[@]}"; do
             echo "Processing repository: $repo"
             all_rules_present=true
 
+            # Fetch branch protection rules for the repository
+            response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+                             -H "Accept: application/vnd.github+json" \
+                             https://api.github.com/repos/$repo/branches)
+
+            echo "Branch protection API response for $repo:"
+            echo "$response"
+
             for branch in "${required_branches[@]}"; do
-              echo "Checking branch protection for: $branch"
+              echo "Checking branch: $branch"
 
-              # Fetch branch protection details for the branch
-              status=$(curl -s -o /dev/null -w "%{http_code}" \
-                -H "Authorization: Bearer $GITHUB_TOKEN" \
-                -H "Accept: application/vnd.github+json" \
-                https://api.github.com/repos/$repo/branches/$branch/protection)
-
-              # Check if the branch protection rule exists
-              if [ "$status" -eq 200 ]; then
-                echo "Branch protection rule found for $branch in $repo."
+              # Check if the branch exists in the protection rules
+              if echo "$response" | jq -e --arg branch "$branch" '.[] | select(.name == $branch)' > /dev/null; then
+                echo "Branch $branch has protection rules."
               else
-                echo "Branch protection rule NOT found for $branch in $repo."
+                echo "Branch $branch does not have protection rules."
                 all_rules_present=false
                 break
               fi
@@ -63,3 +65,6 @@ jobs:
         env:
           repos: ${{ env.repos }}
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
