@@ -1,0 +1,86 @@
+name: Update Cache Action Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      repositories:
+        description: "Comma-separated list of repositories (org/repo1,org/repo2,...)"
+        required: true
+        default: "org/repo1,org/repo2"
+      branch_base:
+        description: "Base branch to create feature branch from"
+        required: true
+        default: "development"
+      feature_branch_prefix:
+        description: "Prefix for the feature branch"
+        required: true
+        default: "update-cache-action"
+      pat_token:
+        description: "Personal Access Token (PAT) for GitHub authentication"
+        required: true
+        default: ""
+
+jobs:
+  update-cache:
+    name: Update Cache Action Version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the current repository
+        uses: actions/checkout@v3
+
+      - name: Authenticate with GitHub using PAT
+        env:
+          GH_TOKEN: ${{ inputs.pat_token }}
+        run: |
+          echo $GH_TOKEN | gh auth login --with-token
+          echo "GitHub CLI authenticated successfully."
+
+      - name: Parse repository list
+        id: parse_repos
+        run: |
+          echo "repositories=$(echo '${{ github.event.inputs.repositories }}' | tr ',' '\n')" >> $GITHUB_ENV
+
+      - name: Process each repository
+        env:
+          GH_TOKEN: ${{ inputs.pat_token }}
+        run: |
+          for REPO in $repositories; do
+            echo "Processing repository: $REPO"
+
+            # Clone the repository
+            gh repo clone "$REPO" repo-dir || { echo "Failed to clone $REPO. Skipping..."; continue; }
+            cd repo-dir || exit
+
+            # Checkout the base branch
+            BRANCH_BASE="${{ github.event.inputs.branch_base }}"
+            git checkout "$BRANCH_BASE" || { echo "Failed to checkout branch $BRANCH_BASE in $REPO. Skipping..."; cd ..; continue; }
+
+            # Create a new feature branch
+            FEATURE_BRANCH="${{ github.event.inputs.feature_branch_prefix }}-$(date +%Y%m%d%H%M%S)"
+            git checkout -b "$FEATURE_BRANCH"
+
+            # Replace actions/cache@v2 with actions/cache@v3 in workflow files
+            if [ -d ".github/workflows" ]; then
+              find ".github/workflows" -type f -name "*.yml" -exec sed -i 's|actions/cache@v2|actions/cache@v3|g' {} +
+              echo "Updated workflows in $REPO."
+
+              # Commit and push changes
+              git add .github/workflows
+              git commit -m "Update actions/cache@v2 to actions/cache@v3"
+              git push -u origin "$FEATURE_BRANCH"
+
+              # Create a pull request
+              gh pr create --title "Update actions/cache@v2 to actions/cache@v3" \
+                --body "This pull request updates GitHub Actions workflows to use actions/cache@v3, as actions/cache@v2 is deprecated." \
+                --base "$BRANCH_BASE" \
+                --head "$FEATURE_BRANCH"
+              echo "Pull request created for $REPO."
+            else
+              echo "No workflows directory found in $REPO. Skipping..."
+            fi
+
+            # Clean up
+            cd ..
+            rm -rf repo-dir
+          done
