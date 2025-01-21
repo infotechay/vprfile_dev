@@ -1,3 +1,83 @@
+# name: Enable Auto Delete Head Branches
+
+# on:
+#   workflow_dispatch:
+
+# jobs:
+#   enable-auto-delete:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Set Repository List
+#         id: set-repos
+#         run: |
+#           # Define your repositories here
+#           target_repositories=("infotechay/Repo1" "infotechay/gke-cicd")
+#           echo "repos=${target_repositories[@]}" >> $GITHUB_ENV
+#           echo "Repositories to process:"
+#           for repo in "${target_repositories[@]}"; do
+#             echo $repo
+#           done
+
+#       - name: Check Branch Protection Rules and Enable Auto Delete
+#         id: check-and-enable
+#         run: |
+#           # Read repositories from environment
+#           IFS=' ' read -r -a repos <<< "$repos"
+#           required_branches=("main" "development" "non-prod")
+
+#           for repo in "${repos[@]}"; do
+#             echo "Processing repository: $repo"
+#             all_rules_present=true
+
+#             # Fetch branch protection rules for the repository
+#             response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+#                              -H "Accept: application/vnd.github+json" \
+#                              https://api.github.com/repos/$repo/branches)
+
+#             echo "Branch protection API response for $repo:"
+#             echo "$response"
+
+#             for branch in "${required_branches[@]}"; do
+#               echo "Checking branch: $branch"
+
+#               # Check if the branch exists in the protection rules
+#               if echo "$response" | jq -e --arg branch "$branch" '.[] | select(.name == $branch)' > /dev/null; then
+#                 echo "Branch $branch has protection rules."
+#               else
+#                 echo "Branch $branch does not have protection rules."
+#                 all_rules_present=false
+#                 break
+#               fi
+#             done
+
+#             # Enable auto-delete head branches if all required branch protection rules are present
+#             if [ "$all_rules_present" = true ]; then
+#               echo "All required branch protection rules found for $repo. Enabling auto-delete head branches."
+#               curl -X PATCH \
+#                 -H "Authorization: Bearer $GITHUB_TOKEN" \
+#                 -H "Accept: application/vnd.github+json" \
+#                 https://api.github.com/repos/$repo \
+#                 -d '{"delete_branch_on_merge": true}' || echo "Failed for $repo"
+#             else
+#               echo "Skipping $repo as it does not have all required branch protection rules."
+#             fi
+#           done
+#         env:
+#           repos: ${{ env.repos }}
+#           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+#       - name: Install jq
+#         run: sudo apt-get install -y jq
+
+
+
+
+
+
+
+
+
+
 name: Enable Auto Delete Head Branches
 
 on:
@@ -29,22 +109,20 @@ jobs:
             echo "Processing repository: $repo"
             all_rules_present=true
 
-            # Fetch branch protection rules for the repository
-            response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-                             -H "Accept: application/vnd.github+json" \
-                             https://api.github.com/repos/$repo/branches)
-
-            echo "Branch protection API response for $repo:"
-            echo "$response"
-
             for branch in "${required_branches[@]}"; do
-              echo "Checking branch: $branch"
+              echo "Checking branch protection for: $branch"
 
-              # Check if the branch exists in the protection rules
-              if echo "$response" | jq -e --arg branch "$branch" '.[] | select(.name == $branch)' > /dev/null; then
-                echo "Branch $branch has protection rules."
+              # Fetch branch protection details for the branch
+              status=$(curl -s -o /dev/null -w "%{http_code}" \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                https://api.github.com/repos/$repo/branches/$branch/protection)
+
+              # Check if branch protection rule exists
+              if [ "$status" -eq 200 ]; then
+                echo "Branch protection rule found for $branch in $repo."
               else
-                echo "Branch $branch does not have protection rules."
+                echo "Branch protection rule NOT found for $branch in $repo."
                 all_rules_present=false
                 break
               fi
