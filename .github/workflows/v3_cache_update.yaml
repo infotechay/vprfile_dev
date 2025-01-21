@@ -29,12 +29,12 @@ jobs:
       - name: Checkout the current repository
         uses: actions/checkout@v3
 
-      - name: Authenticate with GitHub using PAT
-        env:
-          GH_TOKEN: ${{ inputs.pat_token }}
-        run: |
-          echo $GH_TOKEN | gh auth login --with-token
-          echo "GitHub CLI authenticated successfully."
+      # - name: Authenticate with GitHub using PAT
+      #   env:
+      #     GH_TOKEN: ${{ inputs.pat_token }}
+      #   run: |
+      #     echo $GH_TOKEN | gh auth login --with-token
+      #     echo "GitHub CLI authenticated successfully."
 
       - name: Parse repository list
         id: parse_repos
