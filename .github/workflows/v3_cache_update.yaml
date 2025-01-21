@@ -65,7 +65,7 @@ jobs:
             CHANGED=false
 
             if [ -d "$WORKFLOW_DIR" ]; then
-              for FILE in "$WORKFLOW_DIR"/*.yml; do
+              for FILE in "$WORKFLOW_DIR"/*.yaml; do
                 if grep -q "actions/cache@v2" "$FILE"; then
                   echo "Found actions/cache@v2 in $FILE. Updating to actions/cache@v3..."
                   sed -i 's|actions/cache@v2|actions/cache@v3|g' "$FILE"
