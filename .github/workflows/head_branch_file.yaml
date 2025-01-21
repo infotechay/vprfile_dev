@@ -23,7 +23,7 @@ jobs:
         run: |
           # Read repositories from environment
           IFS=' ' read -r -a repos <<< "$repos"
-          required_branches=("main" "development" "non-prod")
+          required_branches=("development" "non-prod")
 
           for repo in "${repos[@]}"; do
             echo "Processing repository: $repo"
