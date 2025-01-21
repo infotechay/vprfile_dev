@@ -60,6 +60,10 @@ jobs:
             FEATURE_BRANCH="${{ github.event.inputs.feature_branch_prefix }}-$(date +%Y%m%d%H%M%S)"
             git checkout -b "$FEATURE_BRANCH"
 
+            # Configure Git user
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+
             # Replace actions/cache@v2 with actions/cache@v3 in workflow files
             if [ -d ".github/workflows" ]; then
               find ".github/workflows" -type f -name "*.yml" -exec sed -i 's|actions/cache@v2|actions/cache@v3|g' {} +
